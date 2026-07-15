@@ -22,8 +22,11 @@ env/
 *.sqlite3
 localhub.db
 
-# === 참고용 문서 (서울 데이터 스키마/출처 — 커밋 제외) ===
+# === 참고용 문서 (로컬 확인용 — 커밋 제외) ===
 data/서울/*.md
+# SOURCE.md(출처·라이선스 표기)는 예외로 커밋 허용
+!data/서울/SOURCE.md
+/DEPLOY.md
 
 # === IDE / OS ===
 .vscode/
