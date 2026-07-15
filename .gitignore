@@ -1,0 +1,29 @@
+# === 민감정보 (RFP 절대 금지 — 커밋 시 감점) ===
+.env
+.env.local
+*.env
+!.env.example
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# === 가상환경 ===
+.venv/
+venv/
+env/
+
+# === SQLite DB (시드 산출물은 별도 스냅샷으로 제출) ===
+*.db
+*.sqlite3
+localhub.db
+
+# === IDE / OS ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
