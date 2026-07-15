@@ -22,6 +22,10 @@ env/
 *.sqlite3
 localhub.db
 
+# === 서울 원본 공공데이터 (TourAPI 4.0, 약 5.7MB, 공공누리 제3유형) ===
+# 대용량 + 라이선스(변경금지) 원본 → GitHub 업로드 금지. 로컬 시드 소스로만 사용.
+data/서울/
+
 # === IDE / OS ===
 .vscode/
 .idea/
