@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app import models  # noqa: F401  (create_all 이 테이블을 인식하려면 import 필요)
-from app.routers import chat, locations, posts
+from app.routers import chat, locations, posts, stats
 
 # 테이블 생성 (없으면). SQLite 파일이 없으면 이 시점에 만들어진다.
 Base.metadata.create_all(bind=engine)
@@ -33,6 +33,7 @@ app.add_middleware(
 app.include_router(posts.router)
 app.include_router(locations.router)
 app.include_router(chat.router)
+app.include_router(stats.router)
 
 
 @app.get("/")
