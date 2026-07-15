@@ -18,6 +18,8 @@ class LocationListItem(BaseModel):
     mapx: float | None
     mapy: float | None
     likes: int
+    event_start: str | None = None  # 축제(15) 행사 시작일 YYYY-MM-DD
+    event_end: str | None = None    # 축제(15) 행사 종료일 YYYY-MM-DD
 
 
 class LocationListResponse(BaseModel):

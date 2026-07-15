@@ -28,6 +28,8 @@ class Location(Base):
     modified_time = Column(String)
     district = Column(String)        # v1.1: addr1에서 추출한 구 이름 (파생 필드)
     likes = Column(Integer, nullable=False, default=0)  # v1.1: 좋아요 카운트
+    event_start = Column(String)     # v1.2: 축제(15) 행사 시작일 YYYY-MM-DD (없으면 NULL)
+    event_end = Column(String)       # v1.2: 축제(15) 행사 종료일 YYYY-MM-DD (없으면 NULL)
 
     __table_args__ = (
         Index("ix_locations_type", "content_type_id"),
