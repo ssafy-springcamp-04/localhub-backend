@@ -1,0 +1,10 @@
+[
+  { "id": 1, "category": "39", "title": "종로 노포 국밥 맛집 아시는 분?", "content": "종로 3가 근처에서 아침에 여는 국밥집 찾고 있어요. 현지분들 추천 부탁드립니다!", "views": 6, "password": "1234", "created_at": "2026-07-14T09:30:00", "updated_at": null },
+  { "id": 2, "category": "12", "title": "경복궁 야간개장 다녀왔어요", "content": "경복궁 야간개장 정말 좋았습니다. 조명이 들어온 근정전이 낮과는 완전히 다른 분위기예요. 예매는 필수!", "views": 41, "password": "1234", "created_at": "2026-07-13T20:10:00", "updated_at": null },
+  { "id": 3, "category": "15", "title": "이번 주말 여의도 봄꽃축제 일정", "content": "여의도 봄꽃축제가 이번 주말까지라고 해요. 저녁에 가면 사람이 조금 덜 붐빕니다.", "views": 88, "password": "1234", "created_at": "2026-07-13T11:05:00", "updated_at": null },
+  { "id": 4, "category": "38", "title": "광장시장 먹거리 리스트 정리", "content": "빈대떡, 마약김밥, 육회. 세 가지는 꼭 드세요. 평일 낮이 가장 여유롭습니다.", "views": 152, "password": "1234", "created_at": "2026-07-12T15:40:00", "updated_at": "2026-07-12T18:00:00" },
+  { "id": 5, "category": "28", "title": "한강 자전거 코스 초보 추천", "content": "잠원 - 반포 구간이 평지라 초보자에게 좋아요. 따릉이 대여소도 많습니다.", "views": 33, "password": "1234", "created_at": "2026-07-12T08:20:00", "updated_at": null },
+  { "id": 6, "category": "32", "title": "명동 근처 가성비 숙소 질문", "content": "2박 예정인데 명동 접근성 좋은 숙소 추천받고 싶습니다. 예산은 1박 10만원 이하예요.", "views": 19, "password": "1234", "created_at": "2026-07-11T22:15:00", "updated_at": null },
+  { "id": 7, "category": "14", "title": "국립중앙박물관 특별전 후기", "content": "특별전 규모가 생각보다 커서 두 시간은 잡아야 합니다. 무료 전시도 볼 게 많아요.", "views": 27, "password": "1234", "created_at": "2026-07-11T13:50:00", "updated_at": null },
+  { "id": 8, "category": "25", "title": "당일치기 고궁 코스 짜봤어요", "content": "경복궁 - 북촌 - 창덕궁 순서로 걸으면 동선이 깔끔합니다. 중간에 삼청동에서 점심 추천.", "views": 64, "password": "1234", "created_at": "2026-07-10T10:00:00", "updated_at": null }
+]
