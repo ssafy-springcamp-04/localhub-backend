@@ -31,7 +31,10 @@ MAP_LIMIT_MAX = 2000
 
 @router.get("", response_model=LocationListResponse)
 def list_locations(
-    type: str = Query(..., description="contentTypeId (12/14/15/25/28/32/38/39)"),
+    type: str | None = Query(
+        None,
+        description="contentTypeId (12/14/15/25/28/32/38/39). 미지정 시 전체 카테고리",
+    ),
     q: str | None = Query(None, description="장소명(title) 검색"),
     district: str | None = Query(None, description="구별 필터 (예: 종로구)"),
     sort: str = Query("name", pattern="^(name|likes)$"),
@@ -39,17 +42,21 @@ def list_locations(
     size: int = Query(12, ge=1, le=100),
     db: Session = Depends(get_db),
 ) -> LocationListResponse:
-    conditions = [Location.content_type_id == type]
+    conditions = []
+    if type:
+        conditions.append(Location.content_type_id == type)
     if q:
         conditions.append(Location.title.like(f"%{q}%"))
     if district:
         conditions.append(Location.district == district)
 
-    total = db.scalar(
-        select(func.count()).select_from(Location).where(*conditions)
-    )
+    count_stmt = select(func.count()).select_from(Location)
+    stmt = select(Location)
+    if conditions:
+        count_stmt = count_stmt.where(*conditions)
+        stmt = stmt.where(*conditions)
 
-    stmt = select(Location).where(*conditions)
+    total = db.scalar(count_stmt)
     if sort == "likes":
         # 추천순, 동률 시 이름(가나다)순 2차 정렬
         stmt = stmt.order_by(Location.likes.desc(), Location.title.asc())
