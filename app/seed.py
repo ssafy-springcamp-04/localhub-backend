@@ -12,12 +12,13 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import bindparam, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
@@ -154,6 +155,53 @@ def seed_locations(db: Session) -> int:
     return len(rows)
 
 
+def _dummy_like_count(content_id: str) -> int:
+    """content_id 기반 결정론적 더미 추천수.
+
+    - 재실행해도 같은 값(멱등) → 시드 반복 안전.
+    - 롱테일 분포: 대부분 한 자릿수, 소수만 인기 장소로 높게.
+    """
+    h = int(hashlib.md5(content_id.encode("utf-8")).hexdigest(), 16)
+    r = h % 1000
+    if r < 550:
+        return r % 15            # 0~14 (대부분)
+    if r < 870:
+        return 15 + (r % 85)     # 15~99
+    if r < 970:
+        return 100 + (r % 200)   # 100~299
+    return 300 + (r % 500)       # 300~799 (소수 인기 장소)
+
+
+def seed_location_likes(db: Session) -> int:
+    """지역정보 추천수(likes) 더미 채우기 — 데모용.
+
+    likes == 0 인 행만 결정론적 값으로 채운다. 사용자가 실제로 누른
+    추천(likes > 0)은 건드리지 않으므로 운영 중 재실행해도 안전.
+    """
+    rows = db.execute(
+        select(Location.id, Location.content_id).where(Location.likes == 0)
+    ).all()
+    params = [
+        {"b_id": loc_id, "b_likes": _dummy_like_count(content_id)}
+        for loc_id, content_id in rows
+        if content_id
+    ]
+    if not params:
+        return 0
+    # ORM 엔티티(update(Location))는 PK 벌크 경로를 타서 executemany 가 막히므로
+    # Core 테이블 업데이트로 executemany 수행.
+    tbl = Location.__table__
+    stmt = (
+        tbl.update()
+        .where(tbl.c.id == bindparam("b_id"))
+        .values(likes=bindparam("b_likes"))
+    )
+    for i in range(0, len(params), 1000):
+        db.execute(stmt, params[i : i + 1000])
+    db.commit()
+    return len(params)
+
+
 def seed_posts(db: Session) -> int:
     # posts 는 커뮤니티(사용자 생성) 데이터라 원본 시드 소스가 없음.
     # 데모용 초기 게시글 파일(data/posts.json)이 있을 때만 적재, 없으면 빈 게시판으로 시작.
@@ -223,10 +271,12 @@ def run() -> None:
     db = SessionLocal()
     try:
         n_loc = seed_locations(db)
+        n_likes = seed_location_likes(db)
         n_post = seed_posts(db)
         total_loc = db.scalar(select(func.count()).select_from(Location)) or 0
         total_post = db.scalar(select(func.count()).select_from(Post)) or 0
         print(f"locations 입력 {n_loc}건 → DB 총 {total_loc}건")
+        print(f"지역정보 추천수 더미 {n_likes}건 채움 (likes==0 대상)")
         print(f"posts 입력 {n_post}건 → DB 총 {total_post}건")
         print_type_distribution(db)
         print_district_distribution(db)
