@@ -22,6 +22,9 @@ env/
 *.sqlite3
 localhub.db
 
+# === 참고용 문서 (서울 데이터 스키마/출처 — 커밋 제외) ===
+data/서울/*.md
+
 # === IDE / OS ===
 .vscode/
 .idea/
