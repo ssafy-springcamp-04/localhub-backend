@@ -15,10 +15,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import bindparam, func, select
+from sqlalchemy import bindparam, func, select, text
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
@@ -202,6 +202,67 @@ def seed_location_likes(db: Session) -> int:
     return len(params)
 
 
+FESTIVAL_YEAR = 2026
+
+
+def _ensure_festival_date_columns(db: Session) -> None:
+    """기존 DB(구 스키마)에 event_start/event_end 컬럼이 없으면 추가한다.
+
+    create_all 은 신규 테이블만 만들고 기존 테이블을 ALTER 하지 않으므로,
+    이미 만들어진 locations 테이블에는 직접 컬럼을 붙여준다(SQLite ADD COLUMN).
+    """
+    existing = {row[1] for row in db.execute(text("PRAGMA table_info(locations)"))}
+    for col in ("event_start", "event_end"):
+        if col not in existing:
+            db.execute(text(f"ALTER TABLE locations ADD COLUMN {col} VARCHAR"))
+    db.commit()
+
+
+def _demo_festival_dates(content_id: str) -> tuple[str, str]:
+    """content_id 기반 결정론적 데모 행사일(시작/종료, 포함).
+
+    원본 TourAPI 목록에는 행사일이 없어 데모용으로 생성한다(멱등).
+    2026년 안에서 시작일을 정하고 1~5일 기간을 부여.
+    """
+    h = int(hashlib.md5(content_id.encode("utf-8")).hexdigest(), 16)
+    day_of_year = h % 365          # 0 ~ 364
+    duration = (h // 365) % 5      # 0 ~ 4 → 1~5일
+    start = date(FESTIVAL_YEAR, 1, 1) + timedelta(days=day_of_year)
+    end = start + timedelta(days=duration)
+    return start.isoformat(), end.isoformat()
+
+
+def seed_festival_dates(db: Session) -> int:
+    """축제(content_type_id=15) 행사일 더미 채우기 — 데모용.
+
+    event_start 가 비어있는 축제만 대상. 결정론적이라 재실행해도 멱등.
+    """
+    rows = db.execute(
+        select(Location.id, Location.content_id).where(
+            Location.content_type_id == "15",
+            Location.event_start.is_(None),
+        )
+    ).all()
+    params = []
+    for loc_id, content_id in rows:
+        if not content_id:
+            continue
+        start, end = _demo_festival_dates(content_id)
+        params.append({"b_id": loc_id, "b_start": start, "b_end": end})
+    if not params:
+        return 0
+    tbl = Location.__table__
+    stmt = (
+        tbl.update()
+        .where(tbl.c.id == bindparam("b_id"))
+        .values(event_start=bindparam("b_start"), event_end=bindparam("b_end"))
+    )
+    for i in range(0, len(params), 1000):
+        db.execute(stmt, params[i : i + 1000])
+    db.commit()
+    return len(params)
+
+
 def seed_posts(db: Session) -> int:
     # posts 는 커뮤니티(사용자 생성) 데이터라 원본 시드 소스가 없음.
     # 데모용 초기 게시글 파일(data/posts.json)이 있을 때만 적재, 없으면 빈 게시판으로 시작.
@@ -270,13 +331,16 @@ def run() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        _ensure_festival_date_columns(db)
         n_loc = seed_locations(db)
         n_likes = seed_location_likes(db)
+        n_fest = seed_festival_dates(db)
         n_post = seed_posts(db)
         total_loc = db.scalar(select(func.count()).select_from(Location)) or 0
         total_post = db.scalar(select(func.count()).select_from(Post)) or 0
         print(f"locations 입력 {n_loc}건 → DB 총 {total_loc}건")
         print(f"지역정보 추천수 더미 {n_likes}건 채움 (likes==0 대상)")
+        print(f"축제 행사일 더미 {n_fest}건 채움 (event_start==NULL 대상)")
         print(f"posts 입력 {n_post}건 → DB 총 {total_post}건")
         print_type_distribution(db)
         print_district_distribution(db)
