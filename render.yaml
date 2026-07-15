@@ -1,0 +1,24 @@
+# Render Blueprint — 백엔드 웹 서비스
+# 대시보드에서 New > Blueprint 로 이 파일을 읽거나, 수동 Web Service 로 동일하게 설정.
+services:
+  - type: web
+    name: localhub-backend
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # OPENAI_API_KEY 는 sync:false → 대시보드에서 직접 입력 (저장소/코드에 절대 커밋 금지)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_TIMEOUT
+        value: "20"
+      # Netlify 배포 도메인 포함해서 대시보드에서 설정
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12.8"
