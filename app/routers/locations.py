@@ -66,6 +66,9 @@ def map_pins(
     types: str | None = Query(
         None, description="콤마 구분 content_type_id 목록 (예: 12,39)"
     ),
+    district: str | None = Query(
+        None, description="구별 필터 (예: 종로구). 미지정 시 전체 구"
+    ),
     limit: int = Query(MAP_LIMIT_DEFAULT, ge=1, le=MAP_LIMIT_MAX),
     db: Session = Depends(get_db),
 ) -> MapResponse:
@@ -77,6 +80,8 @@ def map_pins(
         type_list = [t.strip() for t in types.split(",") if t.strip()]
         if type_list:
             stmt = stmt.where(Location.content_type_id.in_(type_list))
+    if district:
+        stmt = stmt.where(Location.district == district)
     stmt = stmt.limit(limit)
 
     rows = db.execute(stmt).scalars().all()
