@@ -5,6 +5,7 @@ API_CONTRACT_2.md §2.
   - GET  /api/locations/map          §2-2 지도 핀 경량 (types/limit)
   - GET  /api/locations/districts    §2-5 구 목록
   - POST /api/locations/{id}/like    §2-4 좋아요 +1
+  - POST /api/locations/{id}/unlike  §2-4 좋아요 취소 -1
   ※ 2-3 단건 조회는 v1.2 스코프 제외 — 구현하지 않음.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -111,6 +112,20 @@ def like_location(
         raise HTTPException(status_code=404, detail="장소를 찾을 수 없습니다.")
     # 익명 서비스 — 단순 카운트 증가 (계정 기반 중복 방지 없음, 스코프 외)
     loc.likes = (loc.likes or 0) + 1
+    db.commit()
+    db.refresh(loc)
+    return LikeResponse(id=loc.id, likes=loc.likes)
+
+
+@router.post("/{location_id}/unlike", response_model=LikeResponse)
+def unlike_location(
+    location_id: int, db: Session = Depends(get_db)
+) -> LikeResponse:
+    loc = db.get(Location, location_id)
+    if loc is None:
+        raise HTTPException(status_code=404, detail="장소를 찾을 수 없습니다.")
+    # 좋아요 취소 — 카운트 감소 (0 미만으로 내려가지 않도록 방어)
+    loc.likes = max(0, (loc.likes or 0) - 1)
     db.commit()
     db.refresh(loc)
     return LikeResponse(id=loc.id, likes=loc.likes)
