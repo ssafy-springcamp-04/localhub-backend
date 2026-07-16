@@ -17,8 +17,11 @@ from sqlalchemy.orm import Session
 from app.models import Location, Post
 
 # ── 설정 (API 키·모델·타임아웃은 전부 환경변수. 코드/저장소에 키 하드코딩 금지) ──
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 OPENAI_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "20"))
+# temperature 는 환경변수로 줄 때만 전달. 미설정 시 모델 기본값 사용.
+# (gpt-5 계열 등 일부 모델은 temperature 커스텀 값을 거부하므로 기본은 미전달)
+OPENAI_TEMPERATURE = os.getenv("OPENAI_TEMPERATURE")
 
 # 서버측 이중 방어: history 는 최대 10턴(=메시지)까지만 모델에 전달 (비용 상한 조항)
 MAX_HISTORY_MESSAGES = 10
@@ -193,11 +196,10 @@ def _generate_reply(messages: list[dict]) -> str:
         from openai import OpenAI
 
         client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=messages,
-            temperature=0.4,
-        )
+        kwargs = {"model": OPENAI_MODEL, "messages": messages}
+        if OPENAI_TEMPERATURE is not None:
+            kwargs["temperature"] = float(OPENAI_TEMPERATURE)
+        resp = client.chat.completions.create(**kwargs)
         return (resp.choices[0].message.content or "").strip()
     except ChatServiceError:
         raise
