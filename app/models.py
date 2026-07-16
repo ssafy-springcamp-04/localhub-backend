@@ -1,6 +1,16 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import relationship
 
 # Base 는 database.py 에서 정의한 것을 공유해야 create_all 이 테이블을 인식한다.
 from app.database import Base
@@ -52,7 +62,34 @@ class Post(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, onupdate=datetime.utcnow)
 
+    comments = relationship(
+        "Comment",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="Comment.created_at",
+    )
+
     __table_args__ = (
         Index("ix_posts_category_created", "category", "created_at"),
         Index("ix_posts_title", "title"),
+    )
+
+
+class Comment(Base):
+    """게시글 댓글 (익명, 비밀번호 기반 수정·삭제 — 게시글과 동일 정책)"""
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(
+        Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
+    )
+    content = Column(Text, nullable=False)
+    password = Column(String, nullable=False)  # 평문 저장 — 게시글과 동일(교육 목적)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.utcnow)
+
+    post = relationship("Post", back_populates="comments")
+
+    __table_args__ = (
+        Index("ix_comments_post_created", "post_id", "created_at"),
     )

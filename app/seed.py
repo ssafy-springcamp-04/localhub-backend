@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401  (create_all 이 모델을 인식하도록)
 from app.database import Base, SessionLocal, engine
-from app.models import Location, Post
+from app.models import Comment, Location, Post
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 SEOUL_DIR = DATA_DIR / "서울"  # TourAPI 원본 JSON(파일별 = 콘텐츠 유형별)
@@ -327,6 +327,64 @@ def print_district_distribution(db: Session) -> None:
         print(f"  {district or '(NULL)'}: {cnt}")
 
 
+DUMMY_COMMENTS = [
+    "좋은 정보 감사합니다!",
+    "저도 가봐야겠네요 👍",
+    "지난주에 다녀왔는데 정말 좋았어요.",
+    "혹시 주차는 편한가요?",
+    "가격대가 어떻게 되는지 궁금해요.",
+    "주말엔 사람이 많나요?",
+    "대중교통으로 가기 편한가요?",
+    "사진도 같이 올려주시면 좋을 것 같아요.",
+    "근처에 다른 볼거리도 있을까요?",
+    "정보 공유 고맙습니다 :)",
+    "오 유용하네요. 저장해뒀어요.",
+    "다음에 꼭 방문해봐야겠어요.",
+    "영업시간 아시는 분 계신가요?",
+    "완전 공감합니다!",
+    "추천 감사해요, 참고할게요.",
+]
+
+
+def seed_comments(db: Session) -> int:
+    """더미 댓글 — 데모용. 게시글마다 0~3개를 content_id(post.id) 기반 결정론적으로 생성.
+
+    comments 가 하나라도 있으면 건너뜀(사용자 댓글/재실행 보호). 게시글과 동일하게
+    비밀번호는 '1234', 작성일은 게시글 작성일 이후로 배치.
+    """
+    existing = db.scalar(select(func.count()).select_from(Comment)) or 0
+    if existing:
+        print(f"  comments 이미 {existing}건 존재 → 건너뜀")
+        return 0
+
+    posts = db.execute(select(Post.id, Post.created_at)).all()
+    n_pool = len(DUMMY_COMMENTS)
+    objs: list[Comment] = []
+    for post_id, created in posts:
+        h = int(hashlib.md5(f"comment-{post_id}".encode("utf-8")).hexdigest(), 16)
+        count = h % 4  # 0~3개
+        used: set[int] = set()
+        base_dt = created or datetime.utcnow()
+        for i in range(count):
+            idx = (h // (n_pool ** i)) % n_pool
+            while idx in used:  # 같은 글에 중복 문구 방지
+                idx = (idx + 1) % n_pool
+            used.add(idx)
+            # 게시글 작성 이후 시간에 배치 (결정론적, 순차 증가)
+            offset_h = ((h >> (i + 1)) % 60) + 1 + i * 20
+            objs.append(
+                Comment(
+                    post_id=post_id,
+                    content=DUMMY_COMMENTS[idx],
+                    password="1234",
+                    created_at=base_dt + timedelta(hours=offset_h),
+                )
+            )
+    db.add_all(objs)
+    db.commit()
+    return len(objs)
+
+
 def run() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -336,12 +394,15 @@ def run() -> None:
         n_likes = seed_location_likes(db)
         n_fest = seed_festival_dates(db)
         n_post = seed_posts(db)
+        n_comment = seed_comments(db)
         total_loc = db.scalar(select(func.count()).select_from(Location)) or 0
         total_post = db.scalar(select(func.count()).select_from(Post)) or 0
+        total_comment = db.scalar(select(func.count()).select_from(Comment)) or 0
         print(f"locations 입력 {n_loc}건 → DB 총 {total_loc}건")
         print(f"지역정보 추천수 더미 {n_likes}건 채움 (likes==0 대상)")
         print(f"축제 행사일 더미 {n_fest}건 채움 (event_start==NULL 대상)")
         print(f"posts 입력 {n_post}건 → DB 총 {total_post}건")
+        print(f"comments 더미 {n_comment}건 입력 → DB 총 {total_comment}건")
         print_type_distribution(db)
         print_district_distribution(db)
     finally:
